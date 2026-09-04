@@ -6,21 +6,58 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --test lib/**/*.test.ts",
+    "postinstall": "prisma generate",
+    "seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
+    "test:dedupe": "tsx --test lib/sources/dedupe.test.ts",
+    "test:score": "tsx --test lib/evaluation/score.test.ts",
+    "test:resume": "tsx --test lib/resume/parse.test.ts",
+    "test:parse-resume": "tsx --test lib/ai/prompts/structureResume.test.ts",
+    "test:preferences": "tsx --test lib/validation/preferences.test.ts",
+    "test:filter": "tsx --test lib/sources/filter.test.ts",
+    "test:tracker": "tsx --test lib/tracker/states.test.ts",
+    "test:follow-up": "tsx --test lib/ai/prompts/followUp.test.ts",
+    "test:tailor": "tsx --test lib/ai/prompts/tailorCv.test.ts",
+    "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
+    "db:deploy": "dotenv -e .env.local -- prisma migrate deploy",
+    "db:studio": "dotenv -e .env.local -- prisma studio",
+    "trigger:dev": "dotenv -e .env.local -- node ./node_modules/trigger.dev/dist/esm/index.js dev --skip-update-check"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@clerk/nextjs": "^7.8.4",
+    "@google/genai": "^2.20.0",
+    "@prisma/client": "^6.19.3",
+    "@trigger.dev/sdk": "4.5.15",
+    "lucide-react": "^1.39.0",
     "next": "16.3.4",
+    "pdf-parse": "^2.4.5",
+    "playwright": "1.57.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "svix": "^2.2.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@trigger.dev/build": "4.5.15",
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "chromium-bidi": "^17.0.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
+    "trigger.dev": "4.5.15",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

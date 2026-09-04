@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+
+# dev source response cache
+/.cache
+
+# trigger.dev
+.trigger
+
+# trigger.dev local build output
+trigger/tmp/
+
+# throwaway scripts and run-id scratch files
+/scratch/
+/scratch-*.ts
+/.queued
+/.scanrun
+
+# e2e verification scratch
+scripts/_*.mjs
+/_*.mjs

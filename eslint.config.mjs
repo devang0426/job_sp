@@ -12,7 +12,25 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // trigger.dev's local bundler output. Generated, not authored.
+    "trigger/tmp/**",
+    ".trigger/**",
   ]),
+  {
+    rules: {
+      // An adapter that satisfies JobSourceAdapter without needing the
+      // search params still has to declare them. `_name` is the signal
+      // that a binding is deliberately unused.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

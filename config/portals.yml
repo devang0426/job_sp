@@ -1,0 +1,106 @@
+# ATS board tokens.
+#
+# Adding a company is a YAML edit — data, not code.
+#
+# Every token below was verified against its live board API and returned
+# postings. A wrong token is not an error, it is a silently empty result,
+# so re-verify before adding one:
+#
+#   greenhouse  curl https://boards-api.greenhouse.io/v1/boards/<token>/jobs
+#   lever       curl "https://api.lever.co/v0/postings/<token>?mode=json"
+#   ashby       curl https://api.ashbyhq.com/posting-api/job-board/<token>
+#
+# Large boards are capped per scan by MAX_JOBS_PER_BOARD in
+# lib/sources/types.ts, newest postings first.
+
+portals:
+  # --- Greenhouse ---
+  - company: Groww
+    ats: greenhouse
+    token: groww
+
+  - company: Postman
+    ats: greenhouse
+    token: postman
+
+  - company: Figma
+    ats: greenhouse
+    token: figma
+
+  - company: Anthropic
+    ats: greenhouse
+    token: anthropic
+
+  - company: GitLab
+    ats: greenhouse
+    token: gitlab
+
+  - company: Flexport
+    ats: greenhouse
+    token: flexport
+
+  - company: Stripe
+    ats: greenhouse
+    token: stripe
+
+  # --- Lever ---
+  - company: Spotify
+    ats: lever
+    token: spotify
+
+  - company: Palantir
+    ats: lever
+    token: palantir
+
+  - company: Veeva
+    ats: lever
+    token: veeva
+
+  - company: Match Group
+    ats: lever
+    token: matchgroup
+
+  - company: Mindtickle
+    ats: lever
+    token: mindtickle
+
+  - company: Ro
+    ats: lever
+    token: ro
+
+  # --- Ashby ---
+  - company: OpenAI
+    ats: ashby
+    token: openai
+
+  - company: Ramp
+    ats: ashby
+    token: ramp
+
+  - company: Linear
+    ats: ashby
+    token: linear
+
+  - company: Cursor
+    ats: ashby
+    token: cursor
+
+  - company: Replit
+    ats: ashby
+    token: replit
+
+  - company: Supabase
+    ats: ashby
+    token: supabase
+
+  - company: ClickHouse
+    ats: ashby
+    token: clickhouse
+
+  - company: PostHog
+    ats: ashby
+    token: posthog
+
+  - company: Resend
+    ats: ashby
+    token: resend

@@ -1,0 +1,376 @@
+// Prisma schema. Postgres on Neon.
+// url       — pooled connection (host contains -pooler), used by the app.
+// directUrl — direct connection, used for migrations (PgBouncer can't run them).
+// See context/architecture.md and context/env-reference.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  clerkId        String    @unique
+  email          String    @unique
+  firstName      String?
+  lastName       String?
+  imageUrl       String?
+  onboardedAt    DateTime?
+  activeResumeId String?   @unique
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  activeResume Resume?       @relation("ActiveResume", fields: [activeResumeId], references: [id])
+  resumes      Resume[]      @relation("UserResumes")
+  preferences  Preferences?
+  matches      Match[]
+  applications Application[]
+  scanRuns     ScanRun[]
+  artifacts    Artifact[]
+}
+
+model Preferences {
+  id                String      @id @default(cuid())
+  userId            String      @unique
+  targetRoles       String[]
+  locations         String[]
+  remoteOnly        Boolean     @default(false)
+  employmentTypes   String[]
+  seniority         Seniority?
+  minSalary         Int?
+  salaryCurrency    String      @default("INR")
+  keywords          String[]
+  excludeKeywords   String[]
+  excludedCompanies String[]
+  sources           JobSource[]
+  maxJobsPerScan    Int         @default(40)
+  autoEvaluate      Boolean     @default(true)
+
+  // Scheduled scans. When enabled, a per-user trigger.dev CRON schedule is
+  // created for the `auto-scan-sweep` task (see lib/scan/autoScanSchedule.ts).
+  // There is NO global cron — nothing runs unless a user turns this on.
+  autoScanEnabled         Boolean   @default(false)
+  autoScanIntervalMinutes Int       @default(60)
+  autoScanScheduleId      String?
+  lastAutoScanAt          DateTime?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resume {
+  id           String      @id @default(cuid())
+  userId       String
+  label        String      @default("CV")
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  pageCount    Int?
+  rawText      String      @db.Text
+  charCount    Int
+  structured   Json?
+  structuredAt DateTime?
+  parseStatus  ParseStatus @default(PARSED)
+  parseSource  ParseSource @default(PDF_PARSE)
+  parseError   String?
+  createdAt    DateTime    @default(now())
+
+  user          User    @relation("UserResumes", fields: [userId], references: [id], onDelete: Cascade)
+  activeForUser User?   @relation("ActiveResume")
+  matches       Match[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Job {
+  id            String    @id @default(cuid())
+  source        JobSource
+  sourceId      String
+  dedupeKey     String    @unique
+
+  title          String
+  company        String
+  companyDomain  String?
+  location       String?
+  countryCode    String?
+  isRemote       Boolean    @default(false)
+  employmentType String?
+  seniority      Seniority?
+
+  descriptionText  String  @db.Text
+  descriptionChars Int
+  salaryMin        Int?
+  salaryMax        Int?
+  salaryCurrency   String?
+  salaryPeriod     String?
+
+  applyUrl    String    @db.Text
+  sourceUrl   String?   @db.Text
+  postedAt    DateTime?
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  seenCount   Int       @default(1)
+  raw         Json
+
+  firstSeenInScanRunId String?
+  firstSeenInScanRun   ScanRun? @relation(fields: [firstSeenInScanRunId], references: [id], onDelete: SetNull)
+
+  matches      Match[]
+  applications Application[]
+  artifacts    Artifact[]
+
+  @@unique([source, sourceId])
+  @@index([postedAt(sort: Desc)])
+  @@index([company])
+  @@index([firstSeenInScanRunId])
+}
+
+model Match {
+  id                  String          @id @default(cuid())
+  userId              String
+  jobId               String
+  resumeId            String
+
+  status              MatchStatus     @default(PENDING)
+  triggerRunId        String?
+  failureReason       String?         @db.Text
+
+  score               Int?
+  recommendation      Recommendation?
+  modelRecommendation Recommendation?
+
+  dimRoleFit         Int?
+  dimSkillsMatch     Int?
+  dimExperienceDepth Int?
+  dimDomainContext   Int?
+  dimLogistics       Int?
+
+  summary           String?          @db.Text
+  strengths         Json?
+  gaps              Json?
+  cvTips            Json?
+  requirements      Json?
+  legitimacyTier    LegitimacyTier?
+  legitimacySignals Json?
+  scoreCapApplied   String?
+
+  raw           Json?
+  model         String?
+  promptVersion String?
+  inputTokens   Int?
+  outputTokens  Int?
+  cachedTokens  Int        @default(0)
+  costUsd       Decimal?   @db.Decimal(10, 6)
+  latencyMs     Int?
+  evaluatedAt   DateTime?
+  createdAt     DateTime   @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job         Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resume      Resume       @relation(fields: [resumeId], references: [id])
+  application Application?
+
+  @@unique([userId, jobId])
+  @@index([userId, score(sort: Desc)])
+  @@index([userId, recommendation, score(sort: Desc)])
+  @@index([userId, status])
+}
+
+model Application {
+  id              String            @id @default(cuid())
+  userId          String
+  jobId           String
+  matchId         String?           @unique
+
+  status          ApplicationStatus @default(EVALUATED)
+  statusChangedAt DateTime          @default(now())
+  boardOrder      Int               @default(0)
+
+  appliedAt      DateTime?
+  nextFollowUpAt DateTime?
+  lastContactAt  DateTime?
+  notes          String?   @db.Text
+  outcomeNote    String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  match     Match?             @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  events    ApplicationEvent[]
+  artifacts Artifact[]
+
+  @@unique([userId, jobId])
+  @@index([userId, status, boardOrder])
+  @@index([userId, nextFollowUpAt])
+}
+
+model ApplicationEvent {
+  id            String             @id @default(cuid())
+  applicationId String
+  type          EventType
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus?
+  message       String?            @db.Text
+  payload       Json?
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+}
+
+model Artifact {
+  id            String       @id @default(cuid())
+  userId        String
+  kind          ArtifactKind
+  applicationId String?
+  jobId         String?
+  matchId       String?
+
+  subject       String?
+  content       String       @db.Text
+  editedContent String?      @db.Text
+  editedAt      DateTime?
+  inputs        Json
+  model         String
+  promptVersion String
+  inputTokens   Int
+  outputTokens  Int
+  costUsd       Decimal      @db.Decimal(10, 6)
+  createdAt     DateTime     @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  job         Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, kind, createdAt(sort: Desc)])
+  @@index([applicationId])
+}
+
+model ScanRun {
+  id            String      @id @default(cuid())
+  userId        String
+  status        ScanStatus  @default(QUEUED)
+  trigger       ScanTrigger @default(MANUAL)
+  triggerRunId  String?
+  querySnapshot Json
+  sourcesUsed   JobSource[]
+
+  jobsFound         Int   @default(0)
+  jobsNew           Int   @default(0)
+  jobsUpdated       Int   @default(0)
+  jobsFiltered      Int   @default(0)
+  evaluationsQueued Int   @default(0)
+  sourceStats       Json?
+
+  error      String?   @db.Text
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs Job[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+enum JobSource {
+  ADZUNA
+  JSEARCH
+  GREENHOUSE
+  ASHBY
+  LEVER
+  SCRAPED
+  FIRECRAWL
+  MANUAL
+}
+
+enum Seniority {
+  INTERN
+  JUNIOR
+  MID
+  SENIOR
+  STAFF
+  LEAD
+  PRINCIPAL
+}
+
+enum Recommendation {
+  APPLY
+  CONSIDER
+  SKIP
+}
+
+enum LegitimacyTier {
+  VERIFIED
+  LIKELY_LEGITIMATE
+  UNVERIFIED
+  SUSPICIOUS
+}
+
+enum ParseStatus {
+  PARSED
+  EMPTY
+  FAILED
+}
+
+enum ParseSource {
+  PDF_PARSE
+  CLAUDE_DOCUMENT
+  PASTED
+}
+
+enum MatchStatus {
+  PENDING
+  RUNNING
+  COMPLETE
+  FAILED
+}
+
+enum ApplicationStatus {
+  EVALUATED
+  APPLIED
+  RESPONDED
+  INTERVIEW
+  OFFER
+  REJECTED
+  DISCARDED
+  SKIP
+  HIRED
+}
+
+enum EventType {
+  CREATED
+  STATUS_CHANGED
+  NOTE_ADDED
+  ARTIFACT_GENERATED
+  FOLLOW_UP_SENT
+  REEVALUATED
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+}
+
+enum ScanTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+enum ArtifactKind {
+  FOLLOW_UP_EMAIL
+  CV_VARIANT
+}
