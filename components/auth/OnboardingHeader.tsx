@@ -35,10 +35,10 @@ export function OnboardingHeader({ userEmail }: OnboardingHeaderProps) {
           )}
 
           <UserButton
-            afterSignOutUrl="/sign-in"
             appearance={{
               elements: {
-                avatarBox: "w-8 h-8 rounded-full border border-slate-200",
+                userButtonAvatarBox: "w-8 h-8 rounded-full border border-slate-200",
+                userButtonTrigger: "focus:shadow-none focus:outline-none",
               },
             }}
           />
