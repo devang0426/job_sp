@@ -78,7 +78,7 @@ export async function upsertPreferences(
 }
 
 export async function completeOnboarding(userId: string) {
-  const [user, preferences, resumeCount] = await Promise.all([
+  const [user, preferences, resumeCount, latestResume] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { activeResumeId: true, onboardedAt: true },
@@ -89,11 +89,24 @@ export async function completeOnboarding(userId: string) {
     prisma.resume.count({
       where: { userId },
     }),
+    prisma.resume.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    }),
   ]);
 
-  // Requirement: POST /api/onboarding/complete refuses when no resume exists
+  // Refuses when no resume exists at all
   if (!user?.activeResumeId && resumeCount === 0) {
     return { error: "NO_ACTIVE_RESUME" as const };
+  }
+
+  // If user has a resume but activeResumeId wasn't linked, auto-link it
+  if (!user?.activeResumeId && latestResume) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { activeResumeId: latestResume.id },
+    }).catch(() => {});
   }
 
   // Requirement: Preferences must exist before stamping onboardedAt

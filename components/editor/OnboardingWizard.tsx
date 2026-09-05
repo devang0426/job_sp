@@ -67,7 +67,7 @@ export function OnboardingWizard() {
   };
 
   const handleGoToFeed = () => {
-    router.push("/feed");
+    window.location.href = "/feed";
   };
 
   return (
