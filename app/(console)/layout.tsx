@@ -3,6 +3,7 @@ import { Nav } from "@/components/shell/Nav";
 import { StatusBar } from "@/components/shell/StatusBar";
 import { requireUser, UnauthorizedError } from "@/lib/auth";
 import { getStatusCounters } from "@/lib/tracker/counters";
+import { prisma } from "@/lib/db";
 
 // The dispatch console shell: fixed 220px nav, 40px status bar, content
 // scrolls beneath both. Entering the console is also where the JIT User
@@ -21,7 +22,27 @@ export default async function ConsoleLayout({
   }
 
   if (!user.onboardedAt) {
-    redirect("/onboarding");
+    const [resumeCount, preferences, latestResume] = await Promise.all([
+      prisma.resume.count({ where: { userId: user.id } }),
+      prisma.preferences.findUnique({ where: { userId: user.id } }),
+      prisma.resume.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      }),
+    ]);
+
+    if (resumeCount > 0 && preferences && preferences.targetRoles.length > 0) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          onboardedAt: new Date(),
+          ...(user.activeResumeId ? {} : latestResume ? { activeResumeId: latestResume.id } : {}),
+        },
+      }).catch(() => {});
+    } else {
+      redirect("/onboarding");
+    }
   }
 
   // Rendered server-side so the counters arrive with the page. The bar
