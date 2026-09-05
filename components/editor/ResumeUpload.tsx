@@ -87,10 +87,10 @@ export function ResumeUpload({ onResumeUploaded }: { onResumeUploaded?: () => vo
         }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
-      if (!res.ok || json.error) {
-        setError(json.error?.message || "Failed to load sample resume.");
+      if (!res.ok || !json || json.error) {
+        setError(json?.error?.message || `Failed to load sample resume (HTTP ${res.status}). Please try again.`);
       } else {
         setSampleSuccess(`Loaded & structured "${sample.label}"!`);
         setTimeout(() => setSampleSuccess(null), 4000);
@@ -128,15 +128,15 @@ export function ResumeUpload({ onResumeUploaded }: { onResumeUploaded?: () => vo
         body: formData,
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
-      if (!res.ok || json.error) {
+      if (!res.ok || !json || json.error) {
         const errMsg =
-          json.error?.message ||
+          json?.error?.message ||
           "Couldn't read that PDF. Try a text-based PDF, or paste your CV instead.";
         setError(errMsg);
         // Automatically offer paste fallback on unreadable PDF
-        if (json.error?.code === "PDF_UNREADABLE") {
+        if (json?.error?.code === "PDF_UNREADABLE") {
           setIsPasteMode(true);
         }
       } else {
@@ -171,10 +171,10 @@ export function ResumeUpload({ onResumeUploaded }: { onResumeUploaded?: () => vo
         }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
-      if (!res.ok || json.error) {
-        setError(json.error?.message || "Failed to submit pasted text.");
+      if (!res.ok || !json || json.error) {
+        setError(json?.error?.message || "Failed to submit pasted text.");
       } else {
         setPastedText("");
         setPastedLabel("");

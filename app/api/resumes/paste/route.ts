@@ -42,28 +42,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const resume = await createResume({
-    userId: user.id,
-    label: parsed.data.label || "Pasted CV",
-    fileName: "pasted-resume.txt",
-    mimeType: "text/plain",
-    sizeBytes: Buffer.byteLength(normalizedText, "utf-8"),
-    pageCount: null,
-    rawText: normalizedText,
-    charCount: normalizedText.length,
-    parseSource: ParseSource.PASTED,
-  });
-
-  // Asynchronously trigger AI CV structuring task
   try {
-    const { tasks } = await import("@trigger.dev/sdk");
-    await tasks.trigger("structure-resume", { resumeId: resume.id });
-  } catch {
-    const { structureResume } = await import("@/lib/ai/structureResume");
-    structureResume(resume.id).catch((err) =>
-      console.error("Fallback structuring execution failed:", err)
-    );
-  }
+    const resume = await createResume({
+      userId: user.id,
+      label: parsed.data.label || "Pasted CV",
+      fileName: "pasted-resume.txt",
+      mimeType: "text/plain",
+      sizeBytes: Buffer.byteLength(normalizedText, "utf-8"),
+      pageCount: null,
+      rawText: normalizedText,
+      charCount: normalizedText.length,
+      parseSource: ParseSource.PASTED,
+    });
 
-  return ok(resume, 201);
+    // Asynchronously trigger AI CV structuring task
+    try {
+      const { tasks } = await import("@trigger.dev/sdk");
+      await tasks.trigger("structure-resume", { resumeId: resume.id });
+    } catch {
+      const { structureResume } = await import("@/lib/ai/structureResume");
+      structureResume(resume.id).catch((err) =>
+        console.error("Fallback structuring execution failed:", err)
+      );
+    }
+
+    return ok(resume, 201);
+  } catch (err) {
+    console.error("Failed to create pasted resume in database:", err);
+    return fail("INTERNAL", "Failed to save resume. Please try again.", 500);
+  }
 }
