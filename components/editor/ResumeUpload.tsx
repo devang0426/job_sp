@@ -525,8 +525,6 @@ export function ResumeUpload({ onResumeUploaded }: { onResumeUploaded?: () => vo
                           <span>{r.pageCount} pg</span>
                         </>
                       )}
-                      <span>•</span>
-                      <span className="uppercase">{r.parseSource.replace("_", " ")}</span>
                     </div>
                   </div>
 
