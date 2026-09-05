@@ -1,6 +1,8 @@
-import { PDFParse } from "pdf-parse";
 import { ParseSource } from "@prisma/client";
 import { anthropic, DEFAULT_MODEL } from "@/lib/ai/client";
+import { normalizeResumeText } from "./normalize";
+
+export { normalizeResumeText };
 
 export class PdfUnreadableError extends Error {
   readonly code = "PDF_UNREADABLE";
@@ -10,22 +12,6 @@ export class PdfUnreadableError extends Error {
     super(message);
     this.name = "PdfUnreadableError";
   }
-}
-
-export function normalizeResumeText(text: string): string {
-  if (!text) return "";
-
-  return text
-    // Normalize line endings
-    .replace(/\r\n|\r/g, "\n")
-    // Collapse horizontal whitespace (spaces, tabs) except line breaks
-    .replace(/[ \t]+/g, " ")
-    // Strip common page number header/footer artifacts
-    .replace(/\bPage\s+\d+(\s+of\s+\d+)?\b/gi, "")
-    // Collapse 3 or more consecutive newlines into double newlines
-    .replace(/\n{3,}/g, "\n\n")
-    // Trim leading/trailing lines
-    .trim();
 }
 
 export interface ParsedResumeResult {
@@ -42,6 +28,7 @@ export async function parsePdfResume(
 ): Promise<ParsedResumeResult> {
   // Path 1: pdf-parse library
   try {
+    const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText();
     const pageCount = textResult.total || null;

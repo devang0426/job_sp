@@ -36,7 +36,20 @@ function primaryEmailOf(clerkUser: NonNullable<Awaited<ReturnType<typeof current
 // It races with the webhook on first sign-in; both upsert on clerkId and
 // treat a P2002 as a no-op. See context/architecture.md.
 export const requireUser = cache(async function requireUser(): Promise<User> {
-  const { userId } = await auth();
+  let userId: string | null = null;
+  try {
+    const session = await auth();
+    userId = session.userId;
+  } catch (err) {
+    if (
+      (err as { digest?: string })?.digest === "DYNAMIC_SERVER_USAGE" ||
+      (err as { message?: string })?.message?.includes("Dynamic server usage")
+    ) {
+      throw err;
+    }
+    console.warn("auth() failed in requireUser:", err);
+    throw new UnauthorizedError();
+  }
   if (!userId) throw new UnauthorizedError();
 
   const existing = await prisma.user.findUnique({ where: { clerkId: userId } });
@@ -52,7 +65,19 @@ export const requireUser = cache(async function requireUser(): Promise<User> {
     return existing;
   }
 
-  const clerkUser = await currentUser();
+  let clerkUser;
+  try {
+    clerkUser = await currentUser();
+  } catch (err) {
+    if (
+      (err as { digest?: string })?.digest === "DYNAMIC_SERVER_USAGE" ||
+      (err as { message?: string })?.message?.includes("Dynamic server usage")
+    ) {
+      throw err;
+    }
+    console.warn("currentUser() failed in requireUser:", err);
+    throw new UnauthorizedError();
+  }
   if (!clerkUser) throw new UnauthorizedError();
 
   const email = primaryEmailOf(clerkUser);

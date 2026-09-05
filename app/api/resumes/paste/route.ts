@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, UnauthorizedError } from "@/lib/auth";
 import { ok, fail } from "@/lib/api";
 import { resumePasteSchema } from "@/lib/validation/resumes";
-import { normalizeResumeText } from "@/lib/resume/parse";
+import { normalizeResumeText } from "@/lib/resume/normalize";
 import { createResume } from "@/lib/db/resumes";
 import { ParseSource } from "@prisma/client";
 
@@ -13,11 +13,14 @@ export async function POST(request: NextRequest) {
   try {
     user = await requireUser();
   } catch (err) {
-    if (err instanceof Error && err.name === "UnauthorizedError") {
+    if (
+      err instanceof UnauthorizedError ||
+      (err instanceof Error && err.name === "UnauthorizedError")
+    ) {
       return fail("UNAUTHORIZED", "Authentication required.", 401);
     }
     console.error("POST /api/resumes/paste auth error:", err);
-    return fail("INTERNAL", "Authentication failed.", 500);
+    return fail("UNAUTHORIZED", "Authentication required.", 401);
   }
 
   let body: unknown;
@@ -55,20 +58,31 @@ export async function POST(request: NextRequest) {
       parseSource: ParseSource.PASTED,
     });
 
-    // Asynchronously trigger AI CV structuring task
-    try {
-      const { tasks } = await import("@trigger.dev/sdk");
-      await tasks.trigger("structure-resume", { resumeId: resume.id });
-    } catch {
-      const { structureResume } = await import("@/lib/ai/structureResume");
-      structureResume(resume.id).catch((err) =>
-        console.error("Fallback structuring execution failed:", err)
-      );
+    // Asynchronously dispatch AI CV structuring without blocking the response
+    const triggerKey = process.env.TRIGGER_SECRET_KEY;
+    if (triggerKey && !triggerKey.includes("placeholder")) {
+      import("@trigger.dev/sdk")
+        .then(({ tasks }) => tasks.trigger("structure-resume", { resumeId: resume.id }))
+        .catch((triggerErr) => {
+          console.warn("Trigger.dev dispatch failed, falling back to direct structuring:", triggerErr);
+          import("@/lib/ai/structureResume").then(({ structureResume }) => {
+            structureResume(resume.id).catch((err) =>
+              console.error("Fallback structuring execution failed:", err)
+            );
+          });
+        });
+    } else {
+      import("@/lib/ai/structureResume").then(({ structureResume }) => {
+        structureResume(resume.id).catch((err) =>
+          console.error("Direct structuring execution failed:", err)
+        );
+      });
     }
 
     return ok(resume, 201);
   } catch (err) {
     console.error("Failed to create pasted resume in database:", err);
-    return fail("INTERNAL", "Failed to save resume. Please try again.", 500);
+    const errorMessage = err instanceof Error ? err.message : "Failed to save resume. Please try again.";
+    return fail("INTERNAL", errorMessage, 500);
   }
 }
