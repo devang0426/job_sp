@@ -8,19 +8,29 @@ import { MAX_RESUME_FILE_SIZE_BYTES } from "@/lib/validation/resumes";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const user = await requireUser();
-  if (!user) {
-    return fail("UNAUTHORIZED", "Authentication required.", 401);
+  try {
+    const user = await requireUser();
+    const result = await getResumes(user.id);
+    return ok(result);
+  } catch (err) {
+    if (err instanceof Error && err.name === "UnauthorizedError") {
+      return fail("UNAUTHORIZED", "Authentication required.", 401);
+    }
+    console.error("GET /api/resumes error:", err);
+    return fail("INTERNAL", "Failed to retrieve resumes.", 500);
   }
-
-  const result = await getResumes(user.id);
-  return ok(result);
 }
 
 export async function POST(request: NextRequest) {
-  const user = await requireUser();
-  if (!user) {
-    return fail("UNAUTHORIZED", "Authentication required.", 401);
+  let user;
+  try {
+    user = await requireUser();
+  } catch (err) {
+    if (err instanceof Error && err.name === "UnauthorizedError") {
+      return fail("UNAUTHORIZED", "Authentication required.", 401);
+    }
+    console.error("POST /api/resumes auth error:", err);
+    return fail("INTERNAL", "Authentication failed.", 500);
   }
 
   let formData: FormData;

@@ -25,7 +25,7 @@ export interface ResumeItem {
   createdAt: string;
 }
 
-export function ResumeUpload() {
+export function ResumeUpload({ onResumeUploaded }: { onResumeUploaded?: () => void } = {}) {
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,8 +49,12 @@ export function ResumeUpload() {
       if (res.ok) {
         const json = await res.json();
         if (json.data) {
-          setResumes(json.data.resumes || []);
+          const list = json.data.resumes || [];
+          setResumes(list);
           setActiveResumeId(json.data.activeResumeId || null);
+          if (list.length > 0) {
+            onResumeUploaded?.();
+          }
         }
       }
     } catch (err) {
@@ -58,7 +62,7 @@ export function ResumeUpload() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onResumeUploaded]);
 
   useEffect(() => {
     // Loading data on mount is the intended use of an effect. The rule

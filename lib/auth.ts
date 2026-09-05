@@ -55,22 +55,44 @@ export const requireUser = cache(async function requireUser(): Promise<User> {
   const clerkUser = await currentUser();
   if (!clerkUser) throw new UnauthorizedError();
 
+  const email = primaryEmailOf(clerkUser);
+
   try {
     return await prisma.user.upsert({
       where: { clerkId: userId },
       create: {
         clerkId: userId,
-        email: primaryEmailOf(clerkUser),
+        email,
         firstName: clerkUser.firstName,
         lastName: clerkUser.lastName,
         imageUrl: clerkUser.imageUrl,
       },
-      update: {},
+      update: {
+        email,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        imageUrl: clerkUser.imageUrl,
+        deletedAt: null,
+      },
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      const row = await prisma.user.findUnique({ where: { clerkId: userId } });
-      if (row) return row;
+      const byClerk = await prisma.user.findUnique({ where: { clerkId: userId } });
+      if (byClerk) return byClerk;
+
+      const byEmail = await prisma.user.findUnique({ where: { email } });
+      if (byEmail) {
+        return await prisma.user.update({
+          where: { id: byEmail.id },
+          data: {
+            clerkId: userId,
+            firstName: clerkUser.firstName ?? byEmail.firstName,
+            lastName: clerkUser.lastName ?? byEmail.lastName,
+            imageUrl: clerkUser.imageUrl ?? byEmail.imageUrl,
+            deletedAt: null,
+          },
+        });
+      }
     }
     throw error;
   }

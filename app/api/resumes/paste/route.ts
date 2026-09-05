@@ -9,9 +9,15 @@ import { ParseSource } from "@prisma/client";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const user = await requireUser();
-  if (!user) {
-    return fail("UNAUTHORIZED", "Authentication required.", 401);
+  let user;
+  try {
+    user = await requireUser();
+  } catch (err) {
+    if (err instanceof Error && err.name === "UnauthorizedError") {
+      return fail("UNAUTHORIZED", "Authentication required.", 401);
+    }
+    console.error("POST /api/resumes/paste auth error:", err);
+    return fail("INTERNAL", "Authentication failed.", 500);
   }
 
   let body: unknown;
