@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ResumeProfile } from "@/components/editor/ResumeProfile";
-import { Upload, AlertTriangle, Check, Trash2 } from "lucide-react";
+import { Upload, AlertTriangle, Check, Trash2, Sparkles, Zap, FileText } from "lucide-react";
 import type { StructuredResumePayload } from "@/lib/ai/structureResume";
+import { SAMPLE_TECH_RESUMES, type SampleResume } from "@/lib/resume/sampleResumes";
 
 export interface ResumeItem {
   id: string;
@@ -29,6 +30,8 @@ export function ResumeUpload() {
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
+  const [sampleSuccess, setSampleSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
@@ -65,8 +68,41 @@ export function ResumeUpload() {
     fetchResumes();
   }, [fetchResumes]);
 
+  const handleLoadSample = async (sample: SampleResume) => {
+    setError(null);
+    setSampleSuccess(null);
+    setLoadingSample(true);
+
+    try {
+      const res = await fetch("/api/resumes/paste", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: sample.text,
+          label: sample.label,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        setError(json.error?.message || "Failed to load sample resume.");
+      } else {
+        setSampleSuccess(`Loaded & structured "${sample.label}"!`);
+        setTimeout(() => setSampleSuccess(null), 4000);
+        await fetchResumes();
+      }
+    } catch (err) {
+      console.error("Error loading sample resume:", err);
+      setError("Failed to load sample resume.");
+    } finally {
+      setLoadingSample(false);
+    }
+  };
+
   const handleFileUpload = async (file: File) => {
     setError(null);
+    setSampleSuccess(null);
 
     if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
       setError("Only PDF files are supported for resume upload.");
@@ -118,6 +154,7 @@ export function ResumeUpload() {
     }
 
     setError(null);
+    setSampleSuccess(null);
     setSubmittingPaste(true);
 
     try {
@@ -147,6 +184,7 @@ export function ResumeUpload() {
       setSubmittingPaste(false);
     }
   };
+
 
   const handleSetActive = async (id: string) => {
     try {
@@ -237,9 +275,17 @@ export function ResumeUpload() {
         </div>
       </div>
 
+      {/* Success banner */}
+      {sampleSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-sans flex items-center gap-3 rounded-lg">
+          <Check className="w-5 h-5 shrink-0 text-emerald-600" />
+          <p className="font-medium">{sampleSuccess}</p>
+        </div>
+      )}
+
       {/* Error alert banner */}
       {error && (
-        <div className="p-4 bg-state-error/10 border border-state-error/40 text-state-error text-sm font-sans flex items-start gap-3 rounded-none">
+        <div className="p-4 bg-state-error/10 border border-state-error/40 text-state-error text-sm font-sans flex items-start gap-3 rounded-lg">
           <AlertTriangle className="w-5 h-5 shrink-0 text-state-error mt-0.5" />
           <div className="flex-1">
             <p className="font-medium">{error}</p>
@@ -256,13 +302,74 @@ export function ResumeUpload() {
         </div>
       )}
 
+      {/* Recruiter / Quick Demo Preset Showcase */}
+      <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white shadow-xs shrink-0">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-accent">
+                  Recruiter / Demo Quick Start
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
+                  Ready to test
+                </span>
+              </div>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Don&apos;t have a CV file ready? Click a sample tech resume below to instantly load and test the AI evaluation and dispatch pipeline.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {SAMPLE_TECH_RESUMES.map((sample) => (
+            <button
+              key={sample.id}
+              type="button"
+              disabled={loadingSample || uploading}
+              onClick={() => handleLoadSample(sample)}
+              className="flex flex-col items-start p-3 rounded-lg border border-blue-200/80 bg-white hover:border-accent hover:shadow-xs transition-all text-left cursor-pointer group disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-semibold text-text-primary group-hover:text-accent flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-accent" />
+                  {sample.label}
+                </span>
+                <span className="text-[11px] font-mono text-text-muted group-hover:text-accent font-medium">
+                  {loadingSample ? "Loading…" : "⚡ 1-Click Load"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {sample.highlightSkills.slice(0, 5).map((skill) => (
+                  <span
+                    key={skill}
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700"
+                  >
+                    {skill}
+                  </span>
+                ))}
+                {sample.highlightSkills.length > 5 && (
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                    +{sample.highlightSkills.length - 5}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* PDF Drag & Drop Upload Zone */}
       {!isPasteMode && (
         <div
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          className={`border-2 border-dashed p-10 text-center transition-colors rounded-none ${
+          className={`border-2 border-dashed p-10 text-center transition-colors rounded-xl ${
             isDragging
               ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
               : "border-[var(--color-border-default)] hover:border-[var(--color-text-primary)]"
@@ -284,7 +391,7 @@ export function ResumeUpload() {
             <Upload className="w-10 h-10 text-[var(--color-text-muted)]" />
             <div>
               <p className="text-sm font-mono uppercase tracking-wider text-[var(--color-text-primary)]">
-                Drag & Drop your CV PDF here
+                Drag & Drop your own CV PDF here
               </p>
               <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1">
                 PDF files up to 5 MB. Evaluated in-memory and discarded.
@@ -304,19 +411,31 @@ export function ResumeUpload() {
 
       {/* Paste Mode Form */}
       {isPasteMode && (
-        <form onSubmit={handlePasteSubmit} className="space-y-4 border p-6 border-[var(--color-border-default)]">
-          <div className="space-y-1">
+        <form onSubmit={handlePasteSubmit} className="space-y-4 border p-6 border-[var(--color-border-default)] rounded-xl">
+          <div className="flex items-center justify-between">
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--color-text-primary)]">
               CV Label (Optional)
             </label>
-            <input
-              type="text"
-              placeholder="e.g. Senior Frontend Resume 2026"
-              value={pastedLabel}
-              onChange={(e) => setPastedLabel(e.target.value)}
-              className="w-full p-3 bg-transparent border border-[var(--color-border-default)] text-sm font-sans focus:outline-none focus:border-[var(--color-text-primary)] rounded-none"
-            />
+            <button
+              type="button"
+              onClick={() => {
+                const sample = SAMPLE_TECH_RESUMES[0];
+                setPastedLabel(sample.label);
+                setPastedText(sample.text);
+              }}
+              className="text-xs font-medium text-accent hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Insert Sample Tech CV Text
+            </button>
           </div>
+          <input
+            type="text"
+            placeholder="e.g. Senior Frontend Resume 2026"
+            value={pastedLabel}
+            onChange={(e) => setPastedLabel(e.target.value)}
+            className="w-full p-3 bg-transparent border border-[var(--color-border-default)] text-sm font-sans focus:outline-none focus:border-[var(--color-text-primary)] rounded-lg"
+          />
 
           <div className="space-y-1">
             <label className="text-xs font-mono uppercase tracking-wider text-[var(--color-text-primary)]">
@@ -327,9 +446,10 @@ export function ResumeUpload() {
               placeholder="Paste your plain text resume content here..."
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
-              className="w-full p-3 bg-transparent border border-[var(--color-border-default)] text-sm font-mono focus:outline-none focus:border-[var(--color-text-primary)] rounded-none"
+              className="w-full p-3 bg-transparent border border-[var(--color-border-default)] text-sm font-mono focus:outline-none focus:border-[var(--color-text-primary)] rounded-lg"
             />
           </div>
+
 
           <div className="flex justify-end gap-2">
             <Button

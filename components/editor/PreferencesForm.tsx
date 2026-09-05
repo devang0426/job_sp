@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
-import { Check, AlertTriangle, ChevronDown, ChevronUp, ShieldCheck, Zap, Clock } from "lucide-react";
+import { Check, AlertTriangle, ChevronDown, ChevronUp, ShieldCheck, Zap, Clock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AUTO_SCAN_INTERVALS } from "@/lib/validation/preferences";
 
@@ -23,6 +23,83 @@ export interface PreferencesFormData {
   autoScanEnabled: boolean;
   autoScanIntervalMinutes: number;
 }
+
+export interface PreferencePreset {
+  id: string;
+  name: string;
+  badge: string;
+  data: PreferencesFormData;
+}
+
+export const PREFERENCE_PRESETS: PreferencePreset[] = [
+  {
+    id: "fullstack-ai",
+    name: "Senior Full Stack & AI Engineer",
+    badge: "Matches Sample CV",
+    data: {
+      targetRoles: ["Full Stack Engineer", "Senior Software Engineer", "Frontend Engineer", "AI Product Engineer"],
+      locations: ["Remote", "Bengaluru", "San Francisco"],
+      remoteOnly: false,
+      employmentTypes: ["Full-time"],
+      seniority: "SENIOR",
+      minSalary: 2500000,
+      salaryCurrency: "INR",
+      keywords: ["TypeScript", "React", "Next.js", "Node.js", "PostgreSQL", "Python"],
+      excludeKeywords: ["WordPress", "PHP", "Legacy"],
+      excludedCompanies: [],
+      sources: ["GREENHOUSE", "LEVER", "ASHBY", "SCRAPED", "FIRECRAWL"],
+      maxJobsPerScan: 40,
+      autoEvaluate: true,
+      autoScanEnabled: false,
+      autoScanIntervalMinutes: 60,
+    },
+  },
+  {
+    id: "backend-systems",
+    name: "Backend & Distributed Systems",
+    badge: "High-scale backend",
+    data: {
+      targetRoles: ["Backend Engineer", "Senior Systems Engineer", "Platform Engineer", "Distributed Systems"],
+      locations: ["Remote", "Bengaluru", "London", "New York"],
+      remoteOnly: false,
+      employmentTypes: ["Full-time"],
+      seniority: "SENIOR",
+      minSalary: 3000000,
+      salaryCurrency: "INR",
+      keywords: ["Go", "Node.js", "PostgreSQL", "Redis", "Kafka", "Docker", "Kubernetes"],
+      excludeKeywords: ["PHP", "WordPress"],
+      excludedCompanies: [],
+      sources: ["GREENHOUSE", "LEVER", "ASHBY", "SCRAPED", "FIRECRAWL"],
+      maxJobsPerScan: 40,
+      autoEvaluate: true,
+      autoScanEnabled: false,
+      autoScanIntervalMinutes: 60,
+    },
+  },
+  {
+    id: "remote-generalist",
+    name: "Remote-Only Software Developer",
+    badge: "100% Remote",
+    data: {
+      targetRoles: ["Software Engineer", "Full Stack Developer", "Web Developer"],
+      locations: ["Remote"],
+      remoteOnly: true,
+      employmentTypes: ["Full-time", "Contract"],
+      seniority: "MID",
+      minSalary: 1800000,
+      salaryCurrency: "INR",
+      keywords: ["TypeScript", "React", "Node.js", "PostgreSQL", "REST API"],
+      excludeKeywords: ["WordPress"],
+      excludedCompanies: [],
+      sources: ["GREENHOUSE", "LEVER", "ASHBY", "SCRAPED", "FIRECRAWL"],
+      maxJobsPerScan: 40,
+      autoEvaluate: true,
+      autoScanEnabled: false,
+      autoScanIntervalMinutes: 60,
+    },
+  },
+];
+
 
 interface PreferencesFormProps {
   initialData?: Partial<PreferencesFormData>;
@@ -253,18 +330,71 @@ export function PreferencesForm({
 
       {/* Alert Messages */}
       {error && (
-        <div className="p-4 bg-state-error/10 border border-state-error/40 text-state-error text-sm font-sans flex items-center gap-3 rounded-none">
+        <div className="p-4 bg-state-error/10 border border-state-error/40 text-state-error text-sm font-sans flex items-center gap-3 rounded-lg">
           <AlertTriangle className="w-5 h-5 shrink-0 text-state-error" />
           <span>{error}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 bg-state-success/10 border border-state-success/40 text-state-success text-sm font-sans flex items-center gap-3 rounded-none">
-          <Check className="w-5 h-5 shrink-0 text-state-success" />
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-sans flex items-center gap-3 rounded-lg">
+          <Check className="w-5 h-5 shrink-0 text-emerald-600" />
           <span>{successMsg}</span>
         </div>
       )}
+
+      {/* 1-Click Quick Start Presets (For Recruiters / Demos) */}
+      <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 p-4 sm:p-5 shadow-xs">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-white shadow-xs shrink-0">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-accent">
+                1-Click Preference Presets
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
+                Recruiter Quick Test
+              </span>
+            </div>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Instantly configure target roles, skills, seniority, and search filters matching sample resumes with a single click.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          {PREFERENCE_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => {
+                populateForm(preset.data);
+                setSuccessMsg(`Applied "${preset.name}" preset!`);
+                setTimeout(() => setSuccessMsg(null), 3000);
+              }}
+              className="flex flex-col items-start p-3 rounded-lg border border-blue-200/80 bg-white hover:border-accent hover:shadow-xs transition-all text-left cursor-pointer group"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-semibold text-text-primary group-hover:text-accent flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-accent" />
+                  {preset.name}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-accent bg-blue-50 px-1.5 py-0.5 rounded mt-1.5">
+                {preset.badge}
+              </span>
+              <p className="text-[11px] text-text-muted mt-1.5 line-clamp-2">
+                {preset.data.targetRoles.slice(0, 2).join(", ")} • {preset.data.keywords.slice(0, 3).join(", ")}
+              </p>
+              <span className="text-[11px] font-mono text-accent font-medium mt-2 group-hover:underline">
+                ⚡ Apply Preset
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* PRIMARY SECTION: Roles & Locations */}
       <div className="space-y-6">
@@ -278,7 +408,7 @@ export function PreferencesForm({
             placeholder="e.g. Senior Frontend Engineer, Fullstack Developer, Product Architect"
             value={targetRolesText}
             onChange={(e) => setTargetRolesText(e.target.value)}
-            className="w-full p-3 bg-transparent border border-[var(--color-border-default)] text-sm font-sans text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-text-primary)] rounded-none"
+            className="w-full p-3 bg-transparent border border-[var(--color-border-default)] text-sm font-sans text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-text-primary)] rounded-lg"
           />
           <p className="text-xs font-mono text-[var(--color-text-muted)] mt-1">
             Comma-separated job titles. Scans will evaluate postings matching these roles first.
