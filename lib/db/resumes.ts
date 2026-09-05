@@ -55,30 +55,31 @@ export async function getResumes(userId: string) {
 }
 
 export async function createResume(params: CreateResumeParams): Promise<Resume> {
-  return await prisma.$transaction(async (tx) => {
-    const resume = await tx.resume.create({
-      data: {
-        userId: params.userId,
-        label: params.label || params.fileName.replace(/\.pdf$/i, "") || "CV",
-        fileName: params.fileName,
-        mimeType: params.mimeType,
-        sizeBytes: params.sizeBytes,
-        pageCount: params.pageCount ?? null,
-        rawText: params.rawText,
-        charCount: params.charCount,
-        parseSource: params.parseSource,
-      },
-    });
-
-    // Uploading a new resume sets it as the active resume
-    await tx.user.update({
-      where: { id: params.userId },
-      data: { activeResumeId: resume.id },
-    });
-
-    return resume;
+  const resume = await prisma.resume.create({
+    data: {
+      userId: params.userId,
+      label: params.label || params.fileName.replace(/\.pdf$/i, "") || "CV",
+      fileName: params.fileName,
+      mimeType: params.mimeType,
+      sizeBytes: params.sizeBytes,
+      pageCount: params.pageCount ?? null,
+      rawText: params.rawText,
+      charCount: params.charCount,
+      parseSource: params.parseSource,
+    },
   });
+
+  // Uploading a new resume sets it as the active resume
+  await prisma.user.update({
+    where: { id: params.userId },
+    data: { activeResumeId: resume.id },
+  }).catch((err) => {
+    console.error("Failed to set activeResumeId on user:", err);
+  });
+
+  return resume;
 }
+
 
 export async function deleteResume(userId: string, resumeId: string) {
   const [resume, count, user] = await Promise.all([
