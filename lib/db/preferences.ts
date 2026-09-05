@@ -112,3 +112,17 @@ export async function completeOnboarding(userId: string) {
     onboardedAt: updatedUser.onboardedAt,
   };
 }
+
+export async function resetOnboarding(userId: string) {
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { onboardedAt: null },
+    select: { onboardedAt: true },
+  });
+
+  return {
+    success: true as const,
+    onboardedAt: updatedUser.onboardedAt,
+  };
+}
+

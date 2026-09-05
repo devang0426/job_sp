@@ -12,6 +12,7 @@ import {
   Radar,
   Settings,
   Terminal,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -48,8 +49,10 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
 ];
 
 const FOOTER_ITEMS: NavItem[] = [
+  { href: "/onboarding?restart=1", label: "Onboarding Wizard", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
