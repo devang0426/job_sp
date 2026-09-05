@@ -1,13 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireUser, UnauthorizedError } from "@/lib/auth";
 import { OnboardingWizard } from "@/components/editor/OnboardingWizard";
-import { resetOnboarding } from "@/lib/db/preferences";
 
-export default async function OnboardingPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ restart?: string }>;
-}) {
+export default async function OnboardingPage() {
   let user;
   try {
     user = await requireUser();
@@ -16,16 +11,10 @@ export default async function OnboardingPage({
     throw error;
   }
 
-  const resolvedParams = searchParams ? await searchParams : {};
-  const isRestart = resolvedParams.restart === "1";
-
-  if (isRestart && user.onboardedAt) {
-    await resetOnboarding(user.id);
-  } else if (user.onboardedAt && !isRestart) {
-    // If already onboarded and not explicitly restarting, redirect to feed.
+  // Requirement: /onboarding redirects to feed when onboardedAt is set — no loop.
+  if (user.onboardedAt) {
     redirect("/feed");
   }
-
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-base)] text-[var(--color-text-primary)] font-sans py-12 px-4 sm:px-6 md:px-8">

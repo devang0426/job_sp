@@ -116,12 +116,7 @@ export function OnboardingWizard() {
       {/* STEP 1: UPLOAD CV */}
       {step === 1 && (
         <div className="space-y-6">
-          <ResumeUpload
-            onResumeChanged={(list) => {
-              setHasResume(list.length > 0);
-            }}
-          />
-
+          <ResumeUpload />
 
           {completeError && (
             <div className="p-4 bg-state-error/10 border border-state-error/40 text-state-error text-sm font-sans flex items-center gap-3">

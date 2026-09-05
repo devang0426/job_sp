@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
-import { Sparkles, Copy, Check, Eye, EyeOff, KeyRound, Mail, Zap, LogOut } from "lucide-react";
+import { Sparkles, Copy, Check, Eye, EyeOff, KeyRound, Mail, Zap } from "lucide-react";
 
 interface DemoCredentialsCardProps {
   defaultEmail?: string;
@@ -13,13 +12,9 @@ export function DemoCredentialsCard({
   defaultEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL || "recruiter.demo@example.com",
   defaultPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "DemoRecruiter2026!",
 }: DemoCredentialsCardProps) {
-  const { isSignedIn, user } = useUser();
-  const { signOut } = useClerk();
   const [copiedField, setCopiedField] = useState<"email" | "password" | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [autofillStatus, setAutofillStatus] = useState<"idle" | "success" | "partial">("idle");
-  const [signingOut, setSigningOut] = useState(false);
-
 
   const handleCopy = async (text: string, field: "email" | "password") => {
     try {
@@ -122,37 +117,9 @@ export function DemoCredentialsCard({
         </span>
       </div>
 
-      {/* Active Session Notice */}
-      {isSignedIn && (
-        <div className="mt-3.5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold flex items-center gap-1.5 text-amber-900">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              Active Session Logged In
-            </span>
-            <button
-              type="button"
-              disabled={signingOut}
-              onClick={async () => {
-                setSigningOut(true);
-                await signOut({ redirectUrl: "/sign-in" });
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-white text-slate-800 font-medium text-[11px] border border-slate-300 hover:bg-slate-50 cursor-pointer shadow-2xs"
-            >
-              <LogOut className="h-3 w-3 text-slate-600" />
-              <span>{signingOut ? "Signing out..." : "Sign Out to Reset"}</span>
-            </button>
-          </div>
-          <p className="text-[11px] text-amber-700 leading-tight">
-            You are currently signed in as <strong>{user?.primaryEmailAddress?.emailAddress}</strong>. Click <strong className="text-amber-900">Sign Out</strong> to test the username/password login screen from scratch.
-          </p>
-        </div>
-      )}
-
       {/* Credentials display */}
       <div className="mt-3.5 space-y-2">
         {/* Email */}
-
         <div className="flex items-center justify-between gap-2 rounded-lg bg-bg-base px-3 py-2 border border-border-default/70">
           <div className="flex items-center gap-2 overflow-hidden">
             <Mail className="h-3.5 w-3.5 text-text-muted shrink-0" />

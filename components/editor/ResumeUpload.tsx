@@ -25,11 +25,7 @@ export interface ResumeItem {
   createdAt: string;
 }
 
-export interface ResumeUploadProps {
-  onResumeChanged?: (resumes: ResumeItem[]) => void;
-}
-
-export function ResumeUpload({ onResumeChanged }: ResumeUploadProps = {}) {
+export function ResumeUpload() {
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,12 +49,8 @@ export function ResumeUpload({ onResumeChanged }: ResumeUploadProps = {}) {
       if (res.ok) {
         const json = await res.json();
         if (json.data) {
-          const list = json.data.resumes || [];
-          setResumes(list);
+          setResumes(json.data.resumes || []);
           setActiveResumeId(json.data.activeResumeId || null);
-          if (onResumeChanged) {
-            onResumeChanged(list);
-          }
         }
       }
     } catch (err) {
@@ -66,8 +58,7 @@ export function ResumeUpload({ onResumeChanged }: ResumeUploadProps = {}) {
     } finally {
       setLoading(false);
     }
-  }, [onResumeChanged]);
-
+  }, []);
 
   useEffect(() => {
     // Loading data on mount is the intended use of an effect. The rule
@@ -92,11 +83,10 @@ export function ResumeUpload({ onResumeChanged }: ResumeUploadProps = {}) {
         }),
       });
 
-      const json = await res.json().catch(() => null);
+      const json = await res.json();
 
-      if (!res.ok || !json || json.error) {
-        const msg = json?.error?.message || `Failed to load sample resume (HTTP ${res.status}).`;
-        setError(msg);
+      if (!res.ok || json.error) {
+        setError(json.error?.message || "Failed to load sample resume.");
       } else {
         setSampleSuccess(`Loaded & structured "${sample.label}"!`);
         setTimeout(() => setSampleSuccess(null), 4000);
@@ -104,13 +94,11 @@ export function ResumeUpload({ onResumeChanged }: ResumeUploadProps = {}) {
       }
     } catch (err) {
       console.error("Error loading sample resume:", err);
-      const msg = err instanceof Error ? err.message : "Failed to load sample resume.";
-      setError(msg);
+      setError("Failed to load sample resume.");
     } finally {
       setLoadingSample(false);
     }
   };
-
 
   const handleFileUpload = async (file: File) => {
     setError(null);

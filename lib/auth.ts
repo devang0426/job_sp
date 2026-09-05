@@ -71,26 +71,9 @@ export const requireUser = cache(async function requireUser(): Promise<User> {
     if (isUniqueViolation(error)) {
       const row = await prisma.user.findUnique({ where: { clerkId: userId } });
       if (row) return row;
-
-      // Handle email collision when a user re-registers or tests with an existing email
-      const email = primaryEmailOf(clerkUser);
-      const existingByEmail = await prisma.user.findUnique({ where: { email } });
-      if (existingByEmail) {
-        return prisma.user.update({
-          where: { id: existingByEmail.id },
-          data: {
-            clerkId: userId,
-            deletedAt: null,
-            firstName: clerkUser.firstName ?? existingByEmail.firstName,
-            lastName: clerkUser.lastName ?? existingByEmail.lastName,
-            imageUrl: clerkUser.imageUrl ?? existingByEmail.imageUrl,
-          },
-        });
-      }
     }
     throw error;
   }
-
 });
 
 export { isUniqueViolation };
