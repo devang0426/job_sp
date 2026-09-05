@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireUser, UnauthorizedError } from "@/lib/auth";
 import { ok, fail } from "@/lib/api";
 import { resumePasteSchema } from "@/lib/validation/resumes";
 import { normalizeResumeText } from "@/lib/resume/parse";
@@ -9,9 +9,15 @@ import { ParseSource } from "@prisma/client";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const user = await requireUser();
-  if (!user) {
-    return fail("UNAUTHORIZED", "Authentication required.", 401);
+  let user;
+  try {
+    user = await requireUser();
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return fail("UNAUTHORIZED", error.message, 401);
+    }
+    console.error("requireUser error in /api/resumes/paste:", error);
+    return fail("INTERNAL", "Authentication error. Please re-sign in.", 500);
   }
 
   let body: unknown;
@@ -36,28 +42,36 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const resume = await createResume({
-    userId: user.id,
-    label: parsed.data.label || "Pasted CV",
-    fileName: "pasted-resume.txt",
-    mimeType: "text/plain",
-    sizeBytes: Buffer.byteLength(normalizedText, "utf-8"),
-    pageCount: null,
-    rawText: normalizedText,
-    charCount: normalizedText.length,
-    parseSource: ParseSource.PASTED,
-  });
-
-  // Asynchronously trigger AI CV structuring task
   try {
-    const { tasks } = await import("@trigger.dev/sdk");
-    await tasks.trigger("structure-resume", { resumeId: resume.id });
-  } catch {
-    const { structureResume } = await import("@/lib/ai/structureResume");
-    structureResume(resume.id).catch((err) =>
-      console.error("Fallback structuring execution failed:", err)
-    );
-  }
+    const resume = await createResume({
+      userId: user.id,
+      label: parsed.data.label || "Pasted CV",
+      fileName: "pasted-resume.txt",
+      mimeType: "text/plain",
+      sizeBytes: Buffer.byteLength(normalizedText, "utf-8"),
+      pageCount: null,
+      rawText: normalizedText,
+      charCount: normalizedText.length,
+      parseSource: ParseSource.PASTED,
+    });
 
-  return ok(resume, 201);
+    // Asynchronously trigger AI CV structuring task (non-blocking)
+    (async () => {
+      try {
+        const { tasks } = await import("@trigger.dev/sdk");
+        await tasks.trigger("structure-resume", { resumeId: resume.id });
+      } catch {
+        const { structureResume } = await import("@/lib/ai/structureResume");
+        structureResume(resume.id).catch((err) =>
+          console.error("Fallback structuring execution failed:", err)
+        );
+      }
+    })().catch(() => {});
+
+    return ok(resume, 201);
+  } catch (dbErr) {
+    console.error("Failed to create resume in database:", dbErr);
+    return fail("INTERNAL", "Database error while saving resume.", 500);
+  }
 }
+

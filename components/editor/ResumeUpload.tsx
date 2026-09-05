@@ -83,10 +83,11 @@ export function ResumeUpload() {
         }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
-      if (!res.ok || json.error) {
-        setError(json.error?.message || "Failed to load sample resume.");
+      if (!res.ok || !json || json.error) {
+        const msg = json?.error?.message || `Failed to load sample resume (HTTP ${res.status}).`;
+        setError(msg);
       } else {
         setSampleSuccess(`Loaded & structured "${sample.label}"!`);
         setTimeout(() => setSampleSuccess(null), 4000);
@@ -94,11 +95,13 @@ export function ResumeUpload() {
       }
     } catch (err) {
       console.error("Error loading sample resume:", err);
-      setError("Failed to load sample resume.");
+      const msg = err instanceof Error ? err.message : "Failed to load sample resume.";
+      setError(msg);
     } finally {
       setLoadingSample(false);
     }
   };
+
 
   const handleFileUpload = async (file: File) => {
     setError(null);
