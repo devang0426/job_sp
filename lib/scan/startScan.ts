@@ -83,12 +83,13 @@ export async function startScan({
       data: { triggerRunId: handle.id },
     });
   } catch (error) {
-    console.error("Failed to trigger scan task:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Failed to trigger scan task:", errorMessage, error);
     await prisma.scanRun.update({
       where: { id: scanRun.id },
       data: {
         status: "FAILED",
-        error: "Could not start the scan task. Check the trigger.dev configuration.",
+        error: `Could not start the scan task: ${errorMessage}. Check TRIGGER_SECRET_KEY and Trigger.dev configuration.`,
         finishedAt: new Date(),
       },
     });

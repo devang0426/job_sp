@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Radar, ExternalLink, ShieldCheck, Check } from "lucide-react";
+import { ArrowRight, Radar, ExternalLink, ShieldCheck, Check, Play, X, Sparkles } from "lucide-react";
 import { ScoreMeter } from "@/components/meter/ScoreMeter";
 
 const DEMO_POSTINGS = [
@@ -49,7 +49,26 @@ const DEMO_POSTINGS = [
 
 export function LandingHero() {
   const [selectedPosting, setSelectedPosting] = useState(0);
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
   const activePosting = DEMO_POSTINGS[selectedPosting];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsVideoOpen(false);
+      }
+    };
+    if (isVideoOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isVideoOpen]);
 
   return (
     <section className="relative pt-24 pb-14 md:pt-28 md:pb-20 px-4 max-w-6xl mx-auto">
@@ -101,12 +120,16 @@ export function LandingHero() {
               <ArrowRight className="h-3.5 w-3.5 ml-0.5" />
             </Link>
 
-            <a
-              href="#how-it-works"
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.98] text-slate-700 text-xs font-semibold uppercase tracking-wider shadow-2xs transition-all cursor-pointer w-full sm:w-auto"
+            <button
+              type="button"
+              onClick={() => setIsVideoOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] text-slate-700 text-xs font-semibold uppercase tracking-wider shadow-2xs transition-all cursor-pointer w-full sm:w-auto group"
             >
+              <span className="h-4 w-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <Play className="h-2.5 w-2.5 fill-current ml-0.5" />
+              </span>
               <span>See How It Works</span>
-            </a>
+            </button>
           </div>
 
           {/* Trust strip */}
@@ -273,6 +296,82 @@ export function LandingHero() {
           <span className="bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs font-semibold">Adzuna</span>
         </div>
       </div>
+
+      {/* Video Demo Modal Dialog */}
+      {isVideoOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="video-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md transition-all animate-in fade-in duration-200"
+          onClick={() => setIsVideoOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-5xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-slate-900 border-b border-slate-800 text-white">
+              <div className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 id="video-modal-title" className="text-xs sm:text-sm font-semibold tracking-tight">
+                  Job Console Walkthrough · Product Demo
+                </h3>
+                <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                  <Sparkles className="h-3 w-3 text-blue-400" />
+                  Full Feature Demo
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVideoOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close demo video"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Video Player */}
+            <div className="relative bg-black w-full flex items-center justify-center aspect-video max-h-[75vh]">
+              <video
+                src="/demo.webm"
+                controls
+                autoPlay
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-contain"
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-slate-900/90 border-t border-slate-800 text-xs text-slate-400">
+              <span className="font-mono text-[11px]">
+                Watch how real ATS postings are scored, tailored, and dispatched directly.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsVideoOpen(false)}
+                  className="px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <Link
+                  href="/feed"
+                  onClick={() => setIsVideoOpen(false)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-xs"
+                >
+                  <span>Try It Yourself</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
